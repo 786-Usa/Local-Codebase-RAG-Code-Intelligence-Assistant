@@ -26,3 +26,7 @@ client/build/
 .idea/
 .DS_Store
 Thumbs.db
+# Local Vector Data & Database Backups
+rag-service/vector_data/
+rag-service/chroma_db_backup*/
+rag-service/chroma_db_explicit/
