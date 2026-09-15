@@ -7,16 +7,18 @@ import {
   queryCodebase,
 } from "./services/api";
 import FileTree from "./components/FileTree";
-// Added Folder to the import list below:
+import DependencyGraph from "./components/DependencyGraph";
 import {
   Code2,
-  Play,
   Search,
   Database,
   Terminal,
   Loader2,
   Folder,
+  Network,
+  FileCode,
 } from "lucide-react";
+
 export default function App() {
   const [repoPath, setRepoPath] = useState("");
   const [projectId, setProjectId] = useState("my_project");
@@ -25,6 +27,9 @@ export default function App() {
   const [fileContent, setFileContent] = useState(
     "// Select a file from the workspace tree to view code",
   );
+
+  // View state: 'editor' or 'graph'
+  const [activeTab, setActiveTab] = useState("editor");
 
   const [query, setQuery] = useState("");
   const [queryResult, setQueryResult] = useState("");
@@ -46,6 +51,7 @@ export default function App() {
 
   const handleSelectFile = async (filePath) => {
     setActiveFile(filePath);
+    setActiveTab("editor"); // Switch to editor view when selecting a file
     try {
       const res = await fetchFileContent(filePath);
       if (res.success) setFileContent(res.data.content);
@@ -57,7 +63,7 @@ export default function App() {
   const handleIndexRepo = async () => {
     if (!repoPath || !projectId) return;
     setIsIndexing(true);
-    setStatusMsg("Indexing codebase into ChromaDB vector store...");
+    setStatusMsg("Indexing codebase into JSON vector store...");
     try {
       const res = await indexRepository(projectId, repoPath);
       if (res.success) {
@@ -157,24 +163,57 @@ export default function App() {
           )}
         </aside>
 
-        {/* Center Panel: Monaco Editor */}
+        {/* Center Panel: Editor OR AST Dependency Graph */}
         <main className="flex-1 flex flex-col border-r border-gray-800 overflow-hidden">
-          <div className="h-9 bg-gray-900 px-4 border-b border-gray-800 flex items-center text-xs text-gray-400">
-            <span>{activeFile || "No file selected"}</span>
+          {/* View Mode Toggle Header */}
+          <div className="h-9 bg-gray-900 px-4 border-b border-gray-800 flex items-center justify-between text-xs text-gray-400">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveTab("editor")}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors ${
+                  activeTab === "editor"
+                    ? "bg-gray-800 text-indigo-400 font-semibold"
+                    : "hover:bg-gray-800/50 text-gray-400"
+                }`}
+              >
+                <FileCode className="w-3.5 h-3.5" /> Code View
+              </button>
+              <button
+                onClick={() => setActiveTab("graph")}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors ${
+                  activeTab === "graph"
+                    ? "bg-gray-800 text-indigo-400 font-semibold"
+                    : "hover:bg-gray-800/50 text-gray-400"
+                }`}
+              >
+                <Network className="w-3.5 h-3.5" /> AST Dependency Graph
+              </button>
+            </div>
+            <span className="text-[11px] text-gray-500">
+              {activeTab === "editor" ? activeFile || "No file selected" : `Graph view: ${projectId}`}
+            </span>
           </div>
-          <div className="flex-1 bg-gray-950">
-            <Editor
-              height="100%"
-              theme="vs-dark"
-              path={activeFile || "file.js"}
-              value={fileContent}
-              options={{
-                readOnly: true,
-                fontSize: 13,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-              }}
-            />
+
+          {/* View Body */}
+          <div className="flex-1 bg-gray-950 relative">
+            {activeTab === "editor" ? (
+              <Editor
+                height="100%"
+                theme="vs-dark"
+                path={activeFile || "file.js"}
+                value={fileContent}
+                options={{
+                  readOnly: true,
+                  fontSize: 13,
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                }}
+              />
+            ) : (
+              <div className="h-full w-full p-2">
+                <DependencyGraph projectId={projectId} />
+              </div>
+            )}
           </div>
         </main>
 
@@ -191,7 +230,7 @@ export default function App() {
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
                 <span>
-                  Searching vector store & executing Ollama inference...
+                  Searching vector store & executing Gemini inference...
                 </span>
               </div>
             ) : queryResult ? (
@@ -219,8 +258,7 @@ export default function App() {
               </div>
             ) : (
               <p className="text-xs text-gray-500 italic">
-                Ask a natural language query like "Where are user tokens
-                generated?" or "Explain the data flow in server.js".
+                Ask a natural language query like "Where is get_ai_client defined?" or "Explain the data flow in main.py".
               </p>
             )}
           </div>

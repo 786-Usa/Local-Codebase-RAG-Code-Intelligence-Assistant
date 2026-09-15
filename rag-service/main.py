@@ -197,3 +197,48 @@ Original Code:
         return {"success": True, "refactored_code": refactored_code}
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Refactoring failed: {e}") from e
+
+# Append to rag-service/main.py:
+
+@app.get("/dependency-graph/{project_id}")
+def get_dependency_graph(project_id: str):
+    from vector_store import _read
+    records = _read(project_id)
+    
+    if not records:
+        return {"nodes": [], "edges": []}
+        
+    nodes = []
+    edges = []
+    seen_files = set()
+    edge_set = set()
+
+    for record in records:
+        meta = record.get("metadata", {})
+        file_path = meta.get("file_path", "")
+        symbols = meta.get("symbols", [])
+        imports = meta.get("imports", [])
+
+        if file_path and file_path not in seen_files:
+            seen_files.add(file_path)
+            nodes.append({
+                "id": file_path,
+                "label": file_path,
+                "symbols": symbols,
+                "extension": meta.get("extension", "")
+            })
+
+        for imp in imports:
+            # Check if imported module matches any indexed relative file path
+            for target_file in seen_files:
+                if imp in target_file or target_file.endswith(f"{imp}.js") or target_file.endswith(f"{imp}.py"):
+                    edge_id = f"{file_path}->{target_file}"
+                    if edge_id not in edge_set:
+                        edge_set.add(edge_id)
+                        edges.append({
+                            "id": edge_id,
+                            "source": file_path,
+                            "target": target_file
+                        })
+
+    return {"nodes": nodes, "edges": edges}
