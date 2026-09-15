@@ -1,15 +1,18 @@
-import axios from 'axios';
-import fs from 'fs';
-import { getDirectoryTree } from '../utils/fileScanner.js';
+import axios from "axios";
+import fs from "fs";
+import { getDirectoryTree } from "../utils/fileScanner.js";
 
-const PYTHON_SERVICE = process.env.PYTHON_RAG_SERVICE_URL || 'http://localhost:8000';
+const PYTHON_SERVICE =
+  process.env.PYTHON_RAG_SERVICE_URL || "http://localhost:8000";
 
 // GET /api/codebase/tree?repoPath=D:\path\to\repo
 export const getFileTree = async (req, res) => {
   try {
     const { repoPath } = req.query;
     if (!repoPath || !fs.existsSync(repoPath)) {
-      return res.status(400).json({ success: false, message: 'Invalid repository path' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid repository path" });
     }
 
     const tree = getDirectoryTree(repoPath);
@@ -24,10 +27,12 @@ export const getFileContent = async (req, res) => {
   try {
     const { filePath } = req.query;
     if (!filePath || !fs.existsSync(filePath)) {
-      return res.status(400).json({ success: false, message: 'File not found' });
+      return res
+        .status(400)
+        .json({ success: false, message: "File not found" });
     }
 
-    const content = fs.readFileSync(filePath, 'utf-8');
+    const content = fs.readFileSync(filePath, "utf-8");
     res.status(200).json({ success: true, data: { filePath, content } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -39,16 +44,29 @@ export const indexRepository = async (req, res) => {
   try {
     const { projectId, repoPath } = req.body;
 
-    const response = await axios.post(`${PYTHON_SERVICE}/index-repo`, {
-      project_id: projectId,
-      repo_path: repoPath
-    });
+    if (!projectId || !repoPath) {
+      return res.status(400).json({
+        success: false,
+        message: "projectId and repoPath are required",
+      });
+    }
+
+    const response = await axios.post(
+      `${PYTHON_SERVICE}/index-repo`,
+      {
+        project_id: projectId,
+        repo_path: repoPath,
+      },
+      {
+        timeout: 300000, // Increased timeout to 5 minutes (300,000ms)
+      },
+    );
 
     res.status(200).json(response.data);
   } catch (error) {
-    res.status(500).json({
+    res.status(error.response?.status || 502).json({
       success: false,
-      message: error.response?.data?.detail || error.message
+      message: error.response?.data?.detail || error.message,
     });
   }
 };
@@ -61,14 +79,42 @@ export const queryCodebase = async (req, res) => {
     const response = await axios.post(`${PYTHON_SERVICE}/query-codebase`, {
       project_id: projectId,
       query,
-      model: model || 'qwen2.5-coder:7b'
+      model: model || "qwen2.5-coder:7b",
     });
 
     res.status(200).json(response.data);
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.response?.data?.detail || error.message
+      message: error.response?.data?.detail || error.message,
+    });
+  }
+};
+
+// POST /api/codebase/refactor
+export const refactorCode = async (req, res) => {
+  try {
+    const { codeSnippet, instruction, filePath, model } = req.body;
+
+    if (!codeSnippet || !instruction) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing code snippet or instruction",
+      });
+    }
+
+    const response = await axios.post(`${PYTHON_SERVICE}/refactor-code`, {
+      code_snippet: codeSnippet,
+      instruction,
+      file_path: filePath || "snippet.js",
+      model: model || "qwen2.5-coder:7b",
+    });
+
+    res.status(200).json(response.data);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.response?.data?.detail || error.message,
     });
   }
 };

@@ -1,7 +1,6 @@
 import os
 from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
 
-# Extension mapping to LangChain Language enums
 LANGUAGE_MAP = {
     ".js": Language.JS,
     ".jsx": Language.JS,
@@ -13,6 +12,10 @@ LANGUAGE_MAP = {
 }
 
 def chunk_file(file_path: str, content: str):
+    # Cap maximum file content length to prevent thread locks on giant files
+    if len(content) > 100000:
+        content = content[:100000]
+
     ext = os.path.splitext(file_path)[1].lower()
     lang = LANGUAGE_MAP.get(ext, None)
 
