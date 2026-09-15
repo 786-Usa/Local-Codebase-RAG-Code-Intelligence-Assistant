@@ -5,7 +5,8 @@ import {
   indexRepository, 
   queryCodebase, 
   getDependencyGraph, 
-  refactorCode
+  refactorCode, 
+  reviewGitDiff
 } from '../controllers/codebaseController.js';
 
 const router = express.Router();
@@ -16,5 +17,6 @@ router.post('/index', indexRepository);
 router.post('/query', queryCodebase);
 router.get("/graph/:projectId", getDependencyGraph);
 router.post("/refactor-code", refactorCode);
+router.post("/git-diff-review", reviewGitDiff);
 
 export default router;

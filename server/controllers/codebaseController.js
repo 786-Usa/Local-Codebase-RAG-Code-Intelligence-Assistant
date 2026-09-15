@@ -106,3 +106,19 @@ export const refactorCode = async (req, res) => {
     res.status(500).json({ success: false, message: detail });
   }
 };
+
+// Append to server/controllers/codebaseController.js:
+
+export const reviewGitDiff = async (req, res) => {
+  try {
+    const { repo_path, model } = req.body;
+    const response = await axios.post(`${PYTHON_SERVICE}/git-diff-review`, {
+      repo_path,
+      model: model || "gemini-3.6-flash",
+    });
+    res.status(200).json(response.data);
+  } catch (error) {
+    const detail = error.response?.data?.detail || error.message;
+    res.status(500).json({ success: false, message: detail });
+  }
+};

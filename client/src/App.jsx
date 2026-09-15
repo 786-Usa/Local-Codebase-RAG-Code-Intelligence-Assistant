@@ -9,6 +9,7 @@ import {
 import FileTree from "./components/FileTree";
 import DependencyGraph from "./components/DependencyGraph";
 import RefactorPanel from "./components/RefactorPanel";
+import GitReviewPanel from "./components/GitReviewPanel";
 import {
   Code2,
   Search,
@@ -19,6 +20,7 @@ import {
   Network,
   FileCode,
   Sparkles,
+  GitPullRequest,
 } from "lucide-react";
 
 export default function App() {
@@ -30,7 +32,7 @@ export default function App() {
     "// Select a file from the workspace tree to view code",
   );
 
-  // View state: 'editor', 'graph', or 'refactor'
+  // View tab state: 'editor' | 'graph' | 'refactor' | 'review'
   const [activeTab, setActiveTab] = useState("editor");
 
   const [query, setQuery] = useState("");
@@ -165,10 +167,10 @@ export default function App() {
           )}
         </aside>
 
-        {/* Center Panel: Editor OR AST Dependency Graph OR Refactor Diff */}
+        {/* Center Panel: Editor OR AST Dependency Graph OR Refactor Diff OR PR Review */}
         <main className="flex-1 flex flex-col border-r border-gray-800 overflow-hidden">
           {/* View Mode Toggle Header */}
-          <div className="h-9 bg-gray-900 px-4 border-b border-gray-800 flex items-center justify-between text-xs text-gray-400">
+          <div className="h-9 bg-gray-900 px-4 border-b border-gray-800 flex items-center justify-between text-xs text-gray-400 shrink-0">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setActiveTab("editor")}
@@ -200,16 +202,28 @@ export default function App() {
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Refactor Diff
               </button>
+              <button
+                onClick={() => setActiveTab("review")}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors ${
+                  activeTab === "review"
+                    ? "bg-gray-800 text-emerald-400 font-semibold"
+                    : "hover:bg-gray-800/50 text-gray-400"
+                }`}
+              >
+                <GitPullRequest className="w-3.5 h-3.5 text-emerald-400" /> PR Review
+              </button>
             </div>
-            <span className="text-[11px] text-gray-500">
+            <span className="text-[11px] text-gray-500 truncate max-w-xs">
               {activeTab === "graph"
                 ? `Graph view: ${projectId}`
+                : activeTab === "review"
+                ? `PR Review: ${repoPath || "No repo specified"}`
                 : activeFile || "No file selected"}
             </span>
           </div>
 
           {/* View Body */}
-          <div className="flex-1 bg-gray-950 relative">
+          <div className="flex-1 bg-gray-950 relative overflow-hidden">
             {activeTab === "editor" ? (
               <Editor
                 height="100%"
@@ -227,8 +241,10 @@ export default function App() {
               <div className="h-full w-full p-2">
                 <DependencyGraph projectId={projectId} />
               </div>
-            ) : (
+            ) : activeTab === "refactor" ? (
               <RefactorPanel activeFile={activeFile} fileContent={fileContent} />
+            ) : (
+              <GitReviewPanel repoPath={repoPath} />
             )}
           </div>
         </main>

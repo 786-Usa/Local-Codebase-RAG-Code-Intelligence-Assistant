@@ -44,3 +44,14 @@ export const refactorCode = async (codeSnippet, instruction, filePath, model = "
   });
   return response.data;
 };
+
+// Append to client/src/services/api.js:
+// Append or verify in client/src/services/api.js:
+
+export const reviewGitDiff = async (repoPath, model = "gemini-3.6-flash") => {
+  const response = await axios.post(`${API_BASE_URL}/git-diff-review`, {
+    repo_path: repoPath,
+    model,
+  });
+  return response.data;
+};

@@ -242,3 +242,84 @@ def get_dependency_graph(project_id: str):
                         })
 
     return {"nodes": nodes, "edges": edges}
+
+
+# Append to rag-service/main.py:
+
+class ReviewRequest(BaseModel):
+    repo_path: str
+    model: str = "gemini-3.6-flash"
+
+@app.post("/git-diff-review")
+def review_git_diff(req: ReviewRequest):
+    clean_path = os.path.normpath(req.repo_path)
+    if not os.path.exists(clean_path):
+        raise HTTPException(status_code=400, detail=f"Repository path does not exist: {clean_path}")
+
+    try:
+        import subprocess
+        # Get uncommitted git diff in the target repo
+        result = subprocess.run(
+            ["git", "diff", "HEAD"],
+            cwd=clean_path,
+            capture_output=True,
+            text=True,
+            timeout=15
+        )
+        diff_text = result.stdout.strip()
+
+        if not diff_text:
+            # Fallback to checking last commit diff if working tree is clean
+            result_last = subprocess.run(
+                ["git", "diff", "HEAD~1", "HEAD"],
+                cwd=clean_path,
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+            diff_text = result_last.stdout.strip()
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to execute git diff: {str(e)}")
+
+    if not diff_text:
+        return {
+            "success": True,
+            "review": "No active Git diff or recent commit changes detected in this repository."
+        }
+
+    # Limit diff size to prevent token overflow
+    truncated_diff = diff_text[:12000]
+
+    prompt = f"""
+You are an expert Senior Code Reviewer and Security Auditor. Analyze the following Git diff output.
+Provide a structured, actionable Pull Request (PR) review covering:
+1. **Key Changes Summary**: Brief overview of what modified.
+2. **Potential Bugs & Edge Cases**: Logical flaws or null pointer risks.
+3. **Security Vulnerabilities**: Insecure inputs, hardcoded secrets, or unhandled exceptions.
+4. **Optimization & Style Suggestions**: Quick refactoring recommendations.
+
+Git Diff Output:
+```diff
+{truncated_diff}
+```
+"""
+
+    try:
+        target_model = (
+            req.model
+            if req.model and req.model.lower().startswith("gemini-")
+            else "gemini-3.6-flash"
+        )
+        response = get_ai_client().models.generate_content(
+            model=target_model,
+            contents=prompt,
+        )
+        review_text = response.text or "No review generated."
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Gemini execution failed: {e}") from e
+
+    return {
+        "success": True,
+        "review": review_text.strip()
+    }
