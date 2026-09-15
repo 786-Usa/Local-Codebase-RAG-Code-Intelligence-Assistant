@@ -8,6 +8,7 @@ import {
 } from "./services/api";
 import FileTree from "./components/FileTree";
 import DependencyGraph from "./components/DependencyGraph";
+import RefactorPanel from "./components/RefactorPanel";
 import {
   Code2,
   Search,
@@ -17,6 +18,7 @@ import {
   Folder,
   Network,
   FileCode,
+  Sparkles,
 } from "lucide-react";
 
 export default function App() {
@@ -28,7 +30,7 @@ export default function App() {
     "// Select a file from the workspace tree to view code",
   );
 
-  // View state: 'editor' or 'graph'
+  // View state: 'editor', 'graph', or 'refactor'
   const [activeTab, setActiveTab] = useState("editor");
 
   const [query, setQuery] = useState("");
@@ -163,7 +165,7 @@ export default function App() {
           )}
         </aside>
 
-        {/* Center Panel: Editor OR AST Dependency Graph */}
+        {/* Center Panel: Editor OR AST Dependency Graph OR Refactor Diff */}
         <main className="flex-1 flex flex-col border-r border-gray-800 overflow-hidden">
           {/* View Mode Toggle Header */}
           <div className="h-9 bg-gray-900 px-4 border-b border-gray-800 flex items-center justify-between text-xs text-gray-400">
@@ -188,9 +190,21 @@ export default function App() {
               >
                 <Network className="w-3.5 h-3.5" /> AST Dependency Graph
               </button>
+              <button
+                onClick={() => setActiveTab("refactor")}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors ${
+                  activeTab === "refactor"
+                    ? "bg-gray-800 text-amber-400 font-semibold"
+                    : "hover:bg-gray-800/50 text-gray-400"
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Refactor Diff
+              </button>
             </div>
             <span className="text-[11px] text-gray-500">
-              {activeTab === "editor" ? activeFile || "No file selected" : `Graph view: ${projectId}`}
+              {activeTab === "graph"
+                ? `Graph view: ${projectId}`
+                : activeFile || "No file selected"}
             </span>
           </div>
 
@@ -209,10 +223,12 @@ export default function App() {
                   scrollBeyondLastLine: false,
                 }}
               />
-            ) : (
+            ) : activeTab === "graph" ? (
               <div className="h-full w-full p-2">
                 <DependencyGraph projectId={projectId} />
               </div>
+            ) : (
+              <RefactorPanel activeFile={activeFile} fileContent={fileContent} />
             )}
           </div>
         </main>
