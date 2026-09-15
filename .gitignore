@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Python Virtual Environments & Caches
+rag-service/venv/
+rag-service/__pycache__/
+*.pyc
+.pytest_cache/
+
+# Vector Database (ChromaDB Local Storage)
+rag-service/chroma_db/
+
+# Environment Variables & Secrets
+.env
+server/.env
+rag-service/.env
+
+# Build outputs
+client/dist/
+client/build/
+
+# IDE & OS Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
